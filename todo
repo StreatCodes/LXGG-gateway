@@ -1,0 +1,4 @@
+create a login handler with base64 randomly generated key, with hard coded username password for the time being
+test post request
+add middleware to check if key is present, cancel request with error
+save / load keys into array at startup
