@@ -5,6 +5,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 
 	"github.com/go-chi/chi"
 )
@@ -22,8 +24,11 @@ func main() {
 
 	//Setup routes
 	r := chi.NewRouter()
-	r.Post("/login", loginHandler)
-	r.HandleFunc("/", proxyHandler)
+
+	r.Post("/lxgg/login", loginHandler)
+	r.HandleFunc("/1.0*", proxyHandler)
+	r.Get("/static/*", fileServer)
+	r.NotFound(serverIndex)
 
 	//Start http server
 	fmt.Printf("Starting server on %s\n", LXGGConfig.Addr)
@@ -64,4 +69,30 @@ func proxyHandler(w http.ResponseWriter, req *http.Request) {
 	// GET
 	// 	response, err = httpc.Post("http://unix"+flag.Args()[1], "application/octet-stream", strings.NewReader(*post))
 
+}
+
+//Static file handler
+func fileServer(w http.ResponseWriter, r *http.Request) {
+	workDir, _ := os.Getwd()
+	folder := "/static"
+	filesDir := filepath.Join(workDir, folder)
+
+	root := http.Dir(filesDir)
+	fs := http.StripPrefix(folder, http.FileServer(root))
+
+	fs.ServeHTTP(w, r)
+}
+
+//Static file handler
+func serverIndex(w http.ResponseWriter, r *http.Request) {
+	workDir, _ := os.Getwd()
+	index := filepath.Join(workDir, "static", "index.html")
+	f, err := os.Open(index)
+
+	if err != nil {
+		http.Error(w, "Can't open index.html", 404)
+		return
+	}
+
+	io.Copy(w, f)
 }

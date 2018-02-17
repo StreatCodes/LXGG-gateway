@@ -3,22 +3,55 @@ package main
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 )
 
-func loginHandler(w http.ResponseWriter, req *http.Request) {
-	//TODO parse body
+//User struct
+type User struct {
+	Username string
+	Password string
+}
 
-	data := make([]byte, 64)
-	_, err := rand.Read(data)
+//APIKey and expiry
+type APIKey struct {
+	Key    string
+	Expiry time.Time
+}
+
+func loginHandler(w http.ResponseWriter, r *http.Request) {
+	//Decode JSON body
+	dec := json.NewDecoder(r.Body)
+	var user User
+	err := dec.Decode(&user)
 	if err != nil {
-		http.Error(w, "error:"+err.Error(), 500)
+		http.Error(w, err.Error(), 500)
 		return
 	}
 
-	str := base64.StdEncoding.EncodeToString(data)
-	fmt.Println(str)
+	fmt.Printf("%+v\n", user)
 
-	fmt.Fprintf(w, "New key: "+str)
+	if user.Username == "mort" && user.Password == "computer" {
+		//Username and password correct, generate key
+		data := make([]byte, 64)
+		_, err := rand.Read(data)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+
+		key := APIKey{
+			Key:    base64.StdEncoding.EncodeToString(data),
+			Expiry: time.Now().Add(time.Hour * 24 * 7),
+		}
+
+		//Return key in json body
+		enc := json.NewEncoder(w)
+		enc.Encode(key)
+	} else {
+		//Username or password incorrect
+		http.Error(w, "Invalid credentials", http.StatusForbidden)
+	}
 }
